@@ -1,0 +1,127 @@
+﻿openapi: 3.0.3
+info:
+  title: IssueDesk API
+  version: 1.1.0
+  description: JWT-protected issue-driven project management service.
+servers:
+  - url: http://localhost:8080/api/v1
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+  - name: Projects
+  - name: Issues
+  - name: Comments
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RegisterRequest'}}}
+      responses: {'201': {$ref: '#/components/responses/Created'}, '400': {$ref: '#/components/responses/BadRequest'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/LoginRequest'}}}
+      responses: {'200': {$ref: '#/components/responses/OK'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+  /projects:
+    get:
+      tags: [Projects]
+      parameters: [{$ref: '#/components/parameters/Limit'}, {$ref: '#/components/parameters/Offset'}]
+      responses: {'200': {$ref: '#/components/responses/OK'}}
+    post:
+      tags: [Projects]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ProjectRequest'}}}
+      responses: {'201': {$ref: '#/components/responses/Created'}, '400': {$ref: '#/components/responses/BadRequest'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /projects/{projectId}/members:
+    parameters: [{$ref: '#/components/parameters/ProjectId'}]
+    get:
+      tags: [Projects]
+      responses: {'200': {$ref: '#/components/responses/OK'}}
+    post:
+      tags: [Projects]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/MemberRequest'}}}
+      responses: {'201': {$ref: '#/components/responses/Created'}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /projects/{projectId}/issues:
+    parameters: [{$ref: '#/components/parameters/ProjectId'}]
+    get:
+      tags: [Issues]
+      parameters:
+        - {name: status, in: query, schema: {type: string, enum: [open, in_progress, resolved, closed]}}
+        - {name: assignee_id, in: query, schema: {type: string, format: uuid}}
+        - {name: label, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string, enum: [created_at, updated_at, priority], default: created_at}}
+        - {$ref: '#/components/parameters/Limit'}
+        - {$ref: '#/components/parameters/Offset'}
+      responses: {'200': {$ref: '#/components/responses/OK'}, '403': {$ref: '#/components/responses/Forbidden'}}
+    post:
+      tags: [Issues]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/IssueRequest'}}}
+      responses: {'201': {$ref: '#/components/responses/Created'}, '400': {$ref: '#/components/responses/BadRequest'}}
+  /issues/{id}:
+    parameters: [{$ref: '#/components/parameters/IssueId'}]
+    get:
+      tags: [Issues]
+      responses: {'200': {$ref: '#/components/responses/OK'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      tags: [Issues]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/IssuePatch'}}}
+      responses: {'200': {$ref: '#/components/responses/OK'}, '400': {$ref: '#/components/responses/BadRequest'}}
+    delete:
+      tags: [Issues]
+      responses: {'204': {description: Soft-deleted}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /issues/{id}/comments:
+    parameters: [{$ref: '#/components/parameters/IssueId'}]
+    get:
+      tags: [Comments]
+      responses: {'200': {$ref: '#/components/responses/OK'}}
+    post:
+      tags: [Comments]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/CommentRequest'}}}
+      responses: {'201': {$ref: '#/components/responses/Created'}, '400': {$ref: '#/components/responses/BadRequest'}}
+  /comments/{commentId}:
+    parameters: [{$ref: '#/components/parameters/CommentId'}]
+    delete:
+      tags: [Comments]
+      responses: {'204': {description: Soft-deleted}, '403': {$ref: '#/components/responses/Forbidden'}}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    ProjectId: {name: projectId, in: path, required: true, schema: {type: string, format: uuid}}
+    IssueId: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    CommentId: {name: commentId, in: path, required: true, schema: {type: string, format: uuid}}
+    Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+    Offset: {name: offset, in: query, schema: {type: integer, minimum: 0, default: 0}}
+  schemas:
+    RegisterRequest: {type: object, required: [email, name, password], properties: {email: {type: string, format: email}, name: {type: string, minLength: 2}, password: {type: string, minLength: 8}}}
+    LoginRequest: {type: object, required: [email, password], properties: {email: {type: string, format: email}, password: {type: string}}}
+    ProjectRequest: {type: object, required: [name, key], properties: {name: {type: string, minLength: 2}, key: {type: string, minLength: 2, maxLength: 20}, description: {type: string}}}
+    MemberRequest: {type: object, required: [user_id], properties: {user_id: {type: string, format: uuid}, role: {type: string, enum: [member, owner]}}}
+    IssueRequest: {type: object, required: [title], properties: {title: {type: string, maxLength: 255}, description: {type: string}, status: {type: string, enum: [open, in_progress, resolved, closed]}, priority: {type: string, enum: [low, medium, high, urgent]}, assignee_id: {type: string, format: uuid, nullable: true}, labels: {type: array, items: {type: string}}, custom_fields: {type: object, additionalProperties: true}}}
+    IssuePatch: {allOf: [{$ref: '#/components/schemas/IssueRequest'}]}
+    CommentRequest: {type: object, required: [body], properties: {body: {type: string, minLength: 1, maxLength: 10000}}}
+    Envelope: {type: object, properties: {code: {type: integer}, message: {type: string}, data: {}, request_id: {type: string}}}
+  responses:
+    OK: {description: Success, content: {application/json: {schema: {$ref: '#/components/schemas/Envelope'}}}}
+    Created: {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/Envelope'}}}}
+    BadRequest: {description: Invalid request}
+    Unauthorized: {description: Unauthorized}
+    Forbidden: {description: Forbidden}
+    NotFound: {description: Not found}
+    Conflict: {description: Conflict}
