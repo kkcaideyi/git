@@ -1,0 +1,5 @@
+.env
+data/
+logs/
+test-results/
+artifacts/

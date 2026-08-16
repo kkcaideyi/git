@@ -1,0 +1,38 @@
+﻿services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: issuepm
+      POSTGRES_PASSWORD: issuepm
+      POSTGRES_DB: issuepm
+    ports:
+      - "5432:5432"
+    volumes:
+      - issuepm-data:/var/lib/postgresql/data
+      - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U issuepm -d issuepm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  api:
+    build: .
+    environment:
+      APP_ENV: development
+      HTTP_PORT: 8080
+      DATABASE_URL: postgres://issuepm:issuepm@db:5432/issuepm?sslmode=disable
+      JWT_SECRET: change-me-in-production
+      JWT_EXPIRE_HOURS: 24
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  issuepm-data:
+

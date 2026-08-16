@@ -1,0 +1,18 @@
+﻿CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE TABLE IF NOT EXISTS users (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), email varchar(255) UNIQUE NOT NULL, name varchar(120) NOT NULL, password_hash text NOT NULL, role varchar(20) NOT NULL DEFAULT 'user', created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), deleted_at timestamptz);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE TABLE IF NOT EXISTS projects (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name varchar(120) NOT NULL, key varchar(20) UNIQUE NOT NULL, description text, created_by uuid REFERENCES users(id), created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), deleted_at timestamptz);
+CREATE INDEX IF NOT EXISTS idx_projects_created_by ON projects(created_by) WHERE deleted_at IS NULL;
+CREATE TABLE IF NOT EXISTS project_members (project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE, user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE, role varchar(20) NOT NULL DEFAULT 'member', created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(project_id,user_id));
+CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members(user_id, project_id);
+CREATE TABLE IF NOT EXISTS issues (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), project_id uuid NOT NULL REFERENCES projects(id), title varchar(255) NOT NULL, description text, status varchar(30) NOT NULL DEFAULT 'open', priority varchar(20) NOT NULL DEFAULT 'medium', assignee_id uuid REFERENCES users(id), labels jsonb NOT NULL DEFAULT '[]', custom_fields jsonb NOT NULL DEFAULT '{}', created_by uuid NOT NULL REFERENCES users(id), created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), deleted_at timestamptz);
+CREATE INDEX IF NOT EXISTS idx_issues_project_status_created ON issues(project_id,status,created_at DESC,id DESC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_issues_project_updated ON issues(project_id,updated_at DESC,id DESC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_issues_project_priority ON issues(project_id,priority,created_at DESC,id DESC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_issues_assignee ON issues(assignee_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_issues_labels ON issues USING gin(labels);
+CREATE TABLE IF NOT EXISTS comments (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), issue_id uuid NOT NULL REFERENCES issues(id) ON DELETE CASCADE, author_id uuid NOT NULL REFERENCES users(id), body text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), deleted_at timestamptz);
+CREATE INDEX IF NOT EXISTS idx_comments_issue_created ON comments(issue_id,created_at ASC,id ASC) WHERE deleted_at IS NULL;
+CREATE TABLE IF NOT EXISTS audit_logs (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), actor_id uuid REFERENCES users(id), action varchar(80) NOT NULL, entity_type varchar(40) NOT NULL, entity_id uuid, metadata jsonb, created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS idx_audit_entity_created ON audit_logs(entity_type,entity_id,created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_actor_created ON audit_logs(actor_id,created_at DESC);

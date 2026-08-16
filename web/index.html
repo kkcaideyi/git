@@ -1,0 +1,55 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IssueDesk · 轻量项目管理</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div id="toast" class="toast" role="status"></div>
+  <section id="authView" class="auth-layout">
+    <div class="auth-visual">
+      <div class="brand-mark">ID</div>
+      <p class="eyebrow">ISSUE-DRIVEN WORKSPACE</p>
+      <h1>让每个问题，<br /><span>都走向完成。</span></h1>
+      <p class="auth-caption">一个聚焦 Issue 生命周期的轻量项目工作台。清晰分派，快速推进，留下每一次改变。</p>
+      <div class="mini-stats"><div><strong>多项目</strong><span>隔离空间</span></div><div><strong>JSONB</strong><span>自定义字段</span></div><div><strong>JWT</strong><span>安全鉴权</span></div></div>
+    </div>
+    <div class="auth-panel">
+      <div class="auth-tabs"><button class="tab active" data-auth="login">登录</button><button class="tab" data-auth="register">注册</button></div>
+      <form id="authForm" class="auth-form">
+        <div id="nameField" class="field hidden"><label>姓名</label><input name="name" autocomplete="name" /></div>
+        <div class="field"><label>邮箱</label><input name="email" type="email" autocomplete="email" required placeholder="you@company.com" /></div>
+        <div class="field"><label>密码</label><input name="password" type="password" minlength="8" autocomplete="current-password" required placeholder="至少 8 个字符" /></div>
+        <button class="primary wide" type="submit"><span id="authSubmit">进入工作台</span><span class="button-arrow">→</span></button>
+      </form>
+      <p class="auth-hint">服务地址：<code id="apiOrigin"></code></p>
+    </div>
+  </section>
+  <section id="appView" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><div class="brand-mark small">ID</div><span>IssueDesk</span></div>
+      <div class="sidebar-label">项目空间</div>
+      <nav id="projectNav" class="project-nav"></nav>
+      <button id="newProjectBtn" class="ghost full">+ 新建项目</button>
+      <div class="sidebar-footer"><div class="user-chip"><div id="userAvatar" class="avatar">U</div><div><strong id="userName">User</strong><span id="userRole">user</span></div><button id="logoutBtn" title="退出登录">↪</button></div></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar"><div><p class="eyebrow">PROJECT / <span id="projectKey">—</span></p><h2 id="projectTitle">选择一个项目</h2></div><div class="top-actions"><button id="themeBtn" class="icon-btn" title="切换深色模式">☾</button><button id="refreshBtn" class="icon-btn" title="刷新">↻</button><button id="newIssueBtn" class="primary">+ 创建 Issue</button></div></header>
+      <section id="emptyState" class="empty-state"><div class="empty-icon">◎</div><h3>从一个项目开始</h3><p>左侧选择项目，查看和管理你的 Issue。</p></section>
+      <section id="projectView" class="hidden">
+        <div class="summary-row"><div class="summary"><span>全部 Issue</span><strong id="totalCount">0</strong></div><div class="summary"><span>进行中</span><strong id="progressCount">0</strong></div><div class="summary"><span>已完成</span><strong id="doneCount">0</strong></div><div class="summary accent"><span>我的 Issue</span><strong id="mineCount">0</strong></div></div>
+        <div id="dropZones" class="drop-zones"><button data-drop-status="open">待处理</button><button data-drop-status="in_progress">进行中</button><button data-drop-status="resolved">已解决</button><button data-drop-status="closed">已关闭</button></div><div class="toolbar"><div class="search-wrap"><span>⌕</span><input id="searchInput" placeholder="搜索标题或描述" /></div><select id="statusFilter"><option value="">全部状态</option><option value="open">待处理</option><option value="in_progress">进行中</option><option value="resolved">已解决</option><option value="closed">已关闭</option></select><input id="labelFilter" placeholder="标签" /><select id="sortSelect"><option value="created_at">最新创建</option><option value="updated_at">最近更新</option><option value="priority">优先级</option></select></div>
+        <div class="issue-table-wrap"><table><thead><tr><th>Issue</th><th>状态</th><th>优先级</th><th>负责人</th><th>标签</th><th>更新时间</th><th></th></tr></thead><tbody id="issueRows"></tbody></table><div id="tableEmpty" class="table-empty hidden">暂无匹配的 Issue</div></div>
+        <div class="pagination"><span id="pageInfo">0 个 Issue</span><div><button id="prevPage" class="page-btn">←</button><button id="nextPage" class="page-btn">→</button></div></div>
+      </section>
+    </main>
+  </section>
+  <dialog id="projectDialog"><form method="dialog" id="projectForm"><div class="dialog-head"><div><p class="eyebrow">NEW PROJECT</p><h3>创建项目空间</h3></div><button class="close" value="cancel">×</button></div><div class="field"><label>项目名称</label><input name="name" required placeholder="例如：核心产品" /></div><div class="field"><label>项目 Key</label><input name="key" required maxlength="10" placeholder="CORE" /></div><div class="field"><label>描述</label><textarea name="description" rows="3" placeholder="这个项目要解决什么问题？"></textarea></div><button class="primary wide" value="default">创建项目 <span>→</span></button></form></dialog>
+  <dialog id="issueDialog"><form method="dialog" id="issueForm"><div class="dialog-head"><div><p class="eyebrow">NEW ISSUE</p><h3>创建 Issue</h3></div><button class="close" value="cancel">×</button></div><div class="field"><label>标题</label><input name="title" required placeholder="清晰描述需要解决的问题" /></div><div class="field"><label>描述</label><textarea name="description" rows="4" placeholder="补充背景、复现步骤或验收标准"></textarea></div><div class="form-grid"><div class="field"><label>状态</label><select name="status"><option value="open">待处理</option><option value="in_progress">进行中</option><option value="resolved">已解决</option></select></div><div class="field"><label>优先级</label><select name="priority"><option value="low">低</option><option value="medium" selected>中</option><option value="high">高</option><option value="urgent">紧急</option></select></div></div><div class="field"><label>标签 <span class="muted">用逗号分隔</span></label><input name="labels" placeholder="bug, backend" /></div><div class="field"><label>负责人</label><select name="assignee_id"><option value="">未分配</option></select></div><button class="primary wide" value="default">创建 Issue <span>→</span></button></form></dialog>
+  <dialog id="detailDialog"><div id="detailContent"></div></dialog><dialog id="editDialog"><form method="dialog" id="editForm"><div id="editContent"></div></form></dialog>
+  <script src="/static/app.js"></script>
+</body>
+</html>
+
